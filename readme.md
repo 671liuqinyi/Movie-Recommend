@@ -20,7 +20,7 @@
 
 2. 推荐页面
 
-   ![image-20211206135124984](https://gitee.com/gaohuan111/pic/raw/master/img/image-20211206135124984.png)
+   ![image-20211206141513416](C:\Users\HP\AppData\Roaming\Typora\typora-user-images\image-20211206141513416.png)
 
 3. 电影详细信息页面以及排行榜、类似电影推荐
 
