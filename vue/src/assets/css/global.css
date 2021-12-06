@@ -1,0 +1,13 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+.w {
+  width: 1200px;
+  margin: auto;
+}
+
+li {
+  list-style: none;
+}
