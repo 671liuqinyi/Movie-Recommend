@@ -14,8 +14,8 @@
           <h3 class="h3">评分: {{movie.rating}}</h3>
           <h3 class="h3">你的评价:</h3>
           <ul>
-            <li><a @click="like(movie.id)" class="left">喜欢</a></li>
-            <li><a @click="dislike(movie.id)" class="right">不喜欢</a></li>
+            <li><a @click="like" class="left">喜欢</a></li>
+            <li><a @click="dislike" class="right">不喜欢</a></li>
           </ul>
         </div>
         <div class="rank">
@@ -53,8 +53,9 @@ import axios from 'axios'
 export default {
   name: 'Single',
   async created() {
-    console.log(this.$route.query.movieid)
     var query = this.$route.query.movieid
+    // 插入历史记录
+    this.insertHistory(query)
     if (query) {
       axios
         .get('/api/find', {
@@ -72,34 +73,60 @@ export default {
           })
           // 寻找相似电影
         })
-        let result = await axios.get('/api/similar',{
-          params:{
-            id:query
-          }
-        })
-        // console.log('11',result.data.data)
-        if(result.data.code=='200'){
-          this.movieList = result.data.data
+      let result = await axios.get('/api/similar', {
+        params: {
+          id: query
         }
+      })
+      // console.log('11',result.data.data)
+      if (result.data.code == '200') {
+        this.movieList = result.data.data
+      }
     }
   },
   data() {
     return {
       movie: {},
-      rankList: [
-      ],
-      movieList: [
-        ]
+      rankList: [],
+      movieList: [],
+      username: sessionStorage.getItem('username')
     }
   },
   methods: {
-    like(movieid) {
-      console.log(movieid)
-      this.$message.success('评价成功!')
+    async like() {
+      if (sessionStorage.getItem('username')) {
+        this.$message.success('评价成功!')
+        let result = await axios({
+          method: 'post',
+          url: '/api/likemovie',
+          data: { moviegenre: this.movie.genre, username: this.username }
+        })
+        // console.log(result)
+      } else {
+        this.$message.error('请先登录再作评价!')
+        this.$router.push('/login')
+      }
     },
-    dislike(movieid) {
-      console.log(movieid)
-      this.$message.success('评价成功')
+    async dislike() {
+      if (sessionStorage.getItem('username')) {
+        this.$message.success('评价成功!')
+        let result = await axios({
+          method: 'post',
+          url: '/api/dislikemovie',
+          data: { moviegenre: this.movie.genre, username: this.username }
+        })
+      } else {
+        this.$message.error('请先登录再作评价!')
+        this.$router.push('/login')
+      }
+    },
+    insertHistory(movieid) {
+      // console.log(movieid,this.username)
+      axios({
+        method: 'post',
+        url: '/api/inserthistory',
+        data: { movieid: movieid, username: this.username }
+      })
     }
   }
 }

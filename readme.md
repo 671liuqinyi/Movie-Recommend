@@ -25,3 +25,7 @@
 3. 电影详细信息页面以及排行榜、类似电影推荐
 
 ![image-20211206135225065](https://gitee.com/gaohuan111/pic/raw/master/img/image-20211206135225065.png)
+
+4.个人主页词云图以及历史记录
+
+![image-20211220215236115](https://gitee.com/gaohuan111/pic/raw/master/img/image-20211220215236115.png)

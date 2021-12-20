@@ -12,8 +12,7 @@ const routes = [
   },
   {
     path: '/home',
-    name: 'Home',
-    component: Home
+    redirect:'/'
   },
   {
     path: '/login',
@@ -44,6 +43,11 @@ const routes = [
     path: '/findmovie',
     name: 'Search',
     component: () => import('@/views/Search/index.vue')
+  },
+  {
+    path: '/userpage',
+    name: 'userpage',
+    component: () => import('@/views/UserPage/index.vue')
   }
 ]
 

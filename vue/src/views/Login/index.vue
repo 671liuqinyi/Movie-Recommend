@@ -34,22 +34,26 @@ export default {
   },
   methods: {
     async login() {
-      if(sessionStorage.getItem('username')){
+      if (sessionStorage.getItem('username')) {
         this.$message.error(`您已经处于登录状态!`)
-        return 
+        return
+      }
+      if (this.username == '' || this.password == '') {
+        this.$message.error('请输入完整的用户名和密码!')
+        return
       }
       // console.log(sessionStorage.getItem('username'))
       let result = await aixos.post('/api/login', {
         username: this.username,
         password: this.password
       })
-      console.log(result.data)
+      // console.log(result.data)
       if (result.data.code == '200') {
         this.$message.success(`登录成功,欢迎${this.username}!`)
         sessionStorage.setItem('username', this.username)
         this.username = ''
         this.password = ''
-        this.$router.push('/home')
+        this.$router.push('/userpage')
       } else {
         this.$message.error(`登录失败,请检查用户名或密码是否正确!`)
         this.password = ''

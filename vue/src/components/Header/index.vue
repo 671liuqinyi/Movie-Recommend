@@ -20,7 +20,20 @@
     <div class="nav rightnav">
       <ul>
         <li><a @click="chooseinterests">兴趣选择</a></li>
-        <li><a href="/login">登录</a></li>
+        <li v-if="state"><a href="/login">登录</a></li>
+        <li v-else>
+          <a>
+            <el-dropdown @command="handleCommand">
+              <span class="el-dropdown-link">
+                {{nickname==''?'用户':nickname}}<i class="el-icon-arrow-down el-icon--right"></i>
+              </span>
+              <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item command="goHome">个人主页</el-dropdown-item>
+                <el-dropdown-item command="logout" divided>退出</el-dropdown-item>
+              </el-dropdown-menu>
+            </el-dropdown>
+          </a>
+        </li>
       </ul>
     </div>
     <el-dialog title="兴趣选择" :visible.sync="dialogFormVisible">
@@ -87,7 +100,10 @@ export default {
       input: '',
       dialogFormVisible: false,
       formLabelWidth: '120px',
-      checkbox: []
+      checkbox: [],
+      nickname: sessionStorage.getItem('username'),
+      // 登录状态就显示下拉列表
+      state: sessionStorage.getItem('username') == null ? true : false
     }
   },
   methods: {
@@ -139,11 +155,30 @@ export default {
       } else {
         this.$router.push('/login')
       }
+    },
+    handleCommand(command) {
+      if (command == 'goHome') {
+        // this.$message.success('goHome!')
+        this.$router.push('userpage')
+      } else {
+        sessionStorage.removeItem('username')
+        this.$message.success('您已退出登录!')
+        this.$router.push('/home')
+        this.routerRefresh()
+      }
     }
   }
 }
 </script>
 <style lang='less' scoped>
+.el-dropdown-link {
+  cursor: pointer;
+  color: #050505;
+  font-size: 18px;
+}
+.el-icon-arrow-down {
+  font-size: 18px;
+}
 .header {
   height: 116px;
   // background-color: pink;
@@ -153,7 +188,7 @@ export default {
   float: left;
   height: 116px;
   width: 226px;
-  background-color: skyblue;
+  // background-color: skyblue;
   cursor: pointer;
 }
 .nav {
@@ -167,7 +202,7 @@ export default {
 .nav ul li a {
   display: block;
   height: 116px;
-  padding: 0px 10px;
+  padding: 0px 5px;
   line-height: 116px;
   font-size: 18px;
   color: #050505;
@@ -181,12 +216,12 @@ export default {
   width: 251px;
   height: 32px;
   margin-top: 43px;
-  margin-left: 15px;
+  margin-left: 10px;
   // background-color: skyblue;
 }
 .search input {
   float: left;
-  width: 190px;
+  width: 180px;
   height: 30px;
   outline: medium;
   border: 1px solid #00a4ff;

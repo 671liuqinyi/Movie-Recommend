@@ -38,6 +38,10 @@ export default {
   },
   methods: {
     async register() {
+      if (this.username == '' || this.password == '' || this.confirm == '') {
+        this.$message.error('有必填项未填!')
+        return
+      }
       if (this.password != this.confirm) {
         this.$message.error(`两次输入密码不一致!`)
         this.confirm = ''
@@ -52,7 +56,7 @@ export default {
           this.$router.push('/login')
           this.username = ''
           this.password = ''
-          this.confirm=''
+          this.confirm = ''
         } else {
           this.$message.error(`用户名已存在,注册失败!`)
           this.username = ''

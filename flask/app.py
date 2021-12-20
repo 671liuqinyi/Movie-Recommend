@@ -32,8 +32,8 @@ def getRigistRequest():
         cursor.execute(sql)
         initmatrix = '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0'
 
-        cursor2=db.cursor()
-        sql2="update user set tag = '"+initmatrix+"' where iduser = '"+username+"'"
+        cursor2 = db.cursor()
+        sql2 = "update user set tag = '" + initmatrix + "' where iduser = '" + username + "'"
         print(sql2)
         cursor2.execute(sql2)
         # 提交到数据库执行
@@ -48,10 +48,10 @@ def getRigistRequest():
         msg = '404'
     # 关闭数据库连接
     db.close()
-    return {"code":msg}
+    return {"code": msg}
 
 
-@app.route('/api/inserthistory', methods=["get"])
+@app.route('/api/inserthistory', methods=["post"])
 def InsertHistoryRequest():
     # 查询用户名及密码是否匹配及存在
     # print(request.form)
@@ -59,39 +59,42 @@ def InsertHistoryRequest():
     # password = request.form['password']
     # print(username, ' ', password)
     data = request.get_json(silent=True)
-    userid = request.args.get("userid")
-    movieid = request.args.get("movieid")
+    username = data['username']
+    movieid = data['movieid']
+    # print(username,movieid)
     # userid movieid
     # 连接数据库,此前在数据库中创建数据库TESTDB
     # db = pymysql.connect("localhost", "root", "671jiayou", "moviedata")
     db = pymysql.connect(host=dbhost, user=dbuser, password=dbpassword, database=dbname)
     # 使用cursor()方法获取操作游标
-    cursor = db.cursor()
-    cursor1 = db.cursor()
-    sql = "select history from user where iduser = '" + userid + "'"
-    # sql = "select * from user"
-    historylist = []
-    print(sql)
+
     try:
         # 执行sql语句
+        cursor = db.cursor()
+        sql = "select history from user where iduser = '" + username + "'"
         cursor.execute(sql)
         result = cursor.fetchall()
         flag = 0
         for row in result:
             historylist = row[0].split(',')
-            print(historylist)
+            # print(historylist)
             for item in historylist:
-                print(item)
+                # print(item)
                 if movieid == item:
                     flag = 1
             if flag == 0:
                 historylist.append(movieid)
         insertstr = ','.join(str(x) for x in historylist)
+        # print("insert ",insertstr)
         sql1 = "update user set history = %s where iduser = %s"
-        val1 = [insertstr, userid]
+        val1 = [insertstr, username]
+
+        cursor1=db.cursor()
         cursor1.execute(sql1, val1)
         db.commit()
+        msg = "success"
         # 提交到数据库执行
+
     except:
         # 如果发生错误则回滚
         traceback.print_exc()
@@ -102,7 +105,7 @@ def InsertHistoryRequest():
     return {'msg': msg, 'data': data}
 
 
-@app.route('/api/gethistory', methods=["get"])
+@app.route('/api/history', methods=["get"])
 def GetHistoryRequest():
     # 查询用户名及密码是否匹配及存在
     # print(request.form)
@@ -110,8 +113,8 @@ def GetHistoryRequest():
     # password = request.form['password']
     # print(username, ' ', password)
     data = request.get_json(silent=True)
-    userid = request.args.get("userid")
-    print(userid)
+    userid = request.args.get("username")
+    # print(userid)
     # userid
     # 连接数据库,此前在数据库中创建数据库TESTDB
     # db = pymysql.connect("localhost", "root", "671jiayou", "moviedata")
@@ -121,15 +124,36 @@ def GetHistoryRequest():
     sql = "select history from user where iduser = %s"
     val = [userid]
     # sql = "select * from user"
-    print(sql)
+    # print(sql)
     historylist = []
     try:
         # 执行sql语句
         cursor.execute(sql, val)
         result = cursor.fetchall()
-        for row in result:
-            historylist = row[0].split(',')
-            print(historylist)
+        # print('result ',result[0][0])
+        str = "'"
+        for item in result[0][0].split(','):
+            str += item + "','"
+        str = str[:-2]
+        cursor2 = db.cursor()
+        sql2 = "select movie.id,movie.name,rating,img,person.name " + "from movie,relationships,person "
+        sql2 += "where movie.id=relationships.movieid and relationships.personid = person.id "
+        sql2 += "and movie.id in (" + str + ")"
+        sql2 += " group by movie.name"
+        # print("sql2 ",sql2)
+        cursor2.execute(sql2)
+        result = cursor2.fetchall()
+        # print('result ',result)
+        res = []
+        for item in result:
+            id = item[0]
+            name = item[1].split(' ')[0]
+            rating = item[2]
+            img = item[3]
+            director = item[4].split(' ')[0]
+            temp = {"id": id, "movie": name, "rating": rating, "img": img, "director": director}
+            res.append(temp)
+        # print("res ",res)
         # 提交到数据库执行
         msg = 'success'
     except:
@@ -137,9 +161,10 @@ def GetHistoryRequest():
         traceback.print_exc()
         db.rollback()
         msg = 'faild'
+        res = []
     # 关闭数据库连接
     db.close()
-    return {'msg': msg, 'data': historylist}
+    return {'msg': msg, 'data': res}
 
 
 @app.route('/api/login', methods=["post"])
@@ -184,6 +209,380 @@ def getLoginRequest():
     # 关闭数据库连接
     db.close()
     return {'code': code, 'data': data}
+
+
+@app.route('/api/likemovie', methods=["post"])
+def LikeMovie():
+    # 查询用户名及密码是否匹配及存在
+    # postman 测试
+    # print(request.form)
+    # username = request.form['username']
+    # password = request.form['password']
+    # print(username, ' ', password)
+    # 真正使用
+    data = request.get_json(silent=True)
+    username = data['username']
+    moviegenre = data['moviegenre']
+    genrelist = moviegenre.split('/')
+    # print('username ',username)
+    # print('moviegenre ',moviegenre.split('/'))
+    result = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0]
+    # print(result, len(result))
+    for i in genrelist:
+        if i == '喜剧':
+            result[0] += 1
+        elif i == '动作':
+            result[1] += 1
+        elif i == '犯罪':
+            result[2] += 1
+        elif i == '奇幻':
+            result[3] += 1
+        elif i == '剧情':
+            result[4] += 1
+        elif i == '冒险':
+            result[5] += 1
+        elif i == '家庭':
+            result[6] += 1
+        elif i == '爱情':
+            result[7] += 1
+        elif i == '同性':
+            result[8] += 1
+        elif i == '音乐':
+            result[9] += 1
+        elif i == '惊悚':
+            result[10] += 1
+        elif i == '情色':
+            result[11] += 1
+        elif i == '动画':
+            result[12] += 1
+        elif i == '歌舞':
+            result[13] += 1
+        elif i == '科幻':
+            result[14] += 1
+        elif i == '儿童':
+            result[15] += 1
+        elif i == '历史':
+            result[16] += 1
+        elif i == '战争':
+            result[17] += 1
+        elif i == '悬疑':
+            result[18] += 1
+        elif i == '传记':
+            result[19] += 1
+        elif i == '西部':
+            result[20] += 1
+        elif i == '恐怖':
+            result[21] += 1
+        elif i == '武侠':
+            result[22] += 1
+        elif i == '古装':
+            result[23] += 1
+        elif i == '灾难':
+            result[24] += 1
+        elif i == '黑色电影':
+            result[25] += 1
+        elif i == '运动':
+            result[26] += 1
+        elif i == '惊栗':
+            result[27] += 1
+        elif i == '悬念':
+            result[28] += 1
+        elif i == '荒诞':
+            result[29] += 1
+        elif i == '戏曲':
+            result[30] += 1
+        elif i == '鬼怪':
+            result[31] += 1
+        elif i == '达人秀':
+            result[32] += 1
+        elif i == '搞笑':
+            result[33] += 1
+        elif i == '成人':
+            result[34] += 1
+        elif i == '舞台艺术':
+            result[35] += 1
+        elif i == '真人秀':
+            result[36] += 1
+        elif i == '脱口秀':
+            result[37] += 1
+        elif i == '访谈':
+            result[38] += 1
+        elif i == '纪录片':
+            result[39] += 1
+    # print(result)
+    # 连接数据库,此前在数据库中创建数据库TESTDB
+    # db = pymysql.connect("localhost", "root", "671jiayou", "moviedata")
+    db = pymysql.connect(host=dbhost, user=dbuser, password=dbpassword, database=dbname)
+    # 使用cursor()方法获取操作游标
+    cursor = db.cursor()
+    sql = "select tag from user where iduser='" + username + "'"
+    # sql = "select * from user"
+    # print(sql)
+    try:
+        # 执行sql语句
+        cursor.execute(sql)
+        results = cursor.fetchall()
+        # print(type(results[0][0]))
+        if len(results) == 1:
+            res = results[0][0]
+            temp = res.split(',')
+            # print('temp ',temp)
+            for i in range(len(temp)):
+                result[i] += int(temp[i])
+            # print('result ',result)
+            code = '200'
+            newres = ''
+            for i in result:
+                newres += str(i)
+                newres += ","
+            newres = newres[:-1]
+            # print('newres ',newres)
+            cursor2 = db.cursor()
+            sql2 = "update user set tag = '" + newres + "' where iduser = '" + username + "'"
+            # print('sql2 ',sql2)
+            cursor2.execute(sql2)
+            db.commit()
+        else:
+            code = '404'
+            data = ''
+        # 提交到数据库执行
+        db.commit()
+    except:
+        # 如果发生错误则回滚
+        traceback.print_exc()
+        db.rollback()
+        code = '404'
+    # 关闭数据库连接
+    db.close()
+    return {'code': code}
+
+
+@app.route('/api/dislikemovie', methods=["post"])
+def DislikeMovie():
+    # 查询用户名及密码是否匹配及存在
+    # postman 测试
+    # print(request.form)
+    # username = request.form['username']
+    # password = request.form['password']
+    # print(username, ' ', password)
+    # 真正使用
+    data = request.get_json(silent=True)
+    username = data['username']
+    moviegenre = data['moviegenre']
+    genrelist = moviegenre.split('/')
+    # print('username ',username)
+    # print('moviegenre ',moviegenre.split('/'))
+    result = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+              0, 0, 0, 0, 0]
+    # print(result, len(result))
+    for i in genrelist:
+        if i == '喜剧':
+            result[0] -= 1
+            if result[0] < 0:
+                result[0] = 0
+        elif i == '动作':
+            result[1] -= 1
+            if result[1] < 0:
+                result[1] = 0
+        elif i == '犯罪':
+            result[2] -= 1
+            if result[2] < 0:
+                result[2] = 0
+        elif i == '奇幻':
+            result[3] -= 1
+            if result[3] < 0:
+                result[3] = 0
+        elif i == '剧情':
+            result[4] -= 1
+            if result[4] < 0:
+                result[4] = 0
+        elif i == '冒险':
+            result[5] -= 1
+            if result[5] < 0:
+                result[5] = 0
+        elif i == '家庭':
+            result[6] -= 1
+            if result[6] < 0:
+                result[6] = 0
+        elif i == '爱情':
+            result[7] -= 1
+            if result[7] < 0:
+                result[7] = 0
+        elif i == '同性':
+            result[8] -= 1
+            if result[8] < 0:
+                result[8] = 0
+        elif i == '音乐':
+            result[9] -= 1
+            if result[9] < 0:
+                result[9] = 0
+        elif i == '惊悚':
+            result[10] -= 1
+            if result[10] < 0:
+                result[10] = 0
+        elif i == '情色':
+            result[11] -= 1
+            if result[11] < 0:
+                result[11] = 0
+        elif i == '动画':
+            result[12] -= 1
+            if result[12] < 0:
+                result[12] = 0
+        elif i == '歌舞':
+            result[13] -= 1
+            if result[13] < 0:
+                result[13] = 0
+        elif i == '科幻':
+            result[14] -= 1
+            if result[14] < 0:
+                result[14] = 0
+        elif i == '儿童':
+            result[15] -= 1
+            if result[15] < 0:
+                result[15] = 0
+        elif i == '历史':
+            result[16] -= 1
+            if result[16] < 0:
+                result[16] = 0
+        elif i == '战争':
+            result[17] -= 1
+            if result[17] < 0:
+                result[17] = 0
+        elif i == '悬疑':
+            result[18] -= 1
+            if result[18] < 0:
+                result[18] = 0
+        elif i == '传记':
+            result[19] -= 1
+            if result[19] < 0:
+                result[19] = 0
+        elif i == '西部':
+            result[20] -= 1
+            if result[20] < 0:
+                result[20] = 0
+        elif i == '恐怖':
+            result[21] -= 1
+            if result[21] < 0:
+                result[21] = 0
+        elif i == '武侠':
+            result[22] -= 1
+            if result[22] < 0:
+                result[22] = 0
+        elif i == '古装':
+            result[23] -= 1
+            if result[23] < 0:
+                result[23] = 0
+        elif i == '灾难':
+            result[24] -= 1
+            if result[24] < 0:
+                result[24] = 0
+        elif i == '黑色电影':
+            result[25] -= 1
+            if result[25] < 0:
+                result[25] = 0
+        elif i == '运动':
+            result[26] -= 1
+            if result[26] < 0:
+                result[26] = 0
+        elif i == '惊栗':
+            result[27] -= 1
+            if result[27] < 0:
+                result[27] = 0
+        elif i == '悬念':
+            result[28] -= 1
+            if result[28] < 0:
+                result[28] = 0
+        elif i == '荒诞':
+            result[29] -= 1
+            if result[29] < 0:
+                result[29] = 0
+        elif i == '戏曲':
+            result[30] -= 1
+            if result[30] < 0:
+                result[30] = 0
+        elif i == '鬼怪':
+            result[31] -= 1
+            if result[31] < 0:
+                result[31] = 0
+        elif i == '达人秀':
+            result[32] -= 1
+            if result[32] < 0:
+                result[32] = 0
+        elif i == '搞笑':
+            result[33] -= 1
+            if result[33] < 0:
+                result[33] = 0
+        elif i == '成人':
+            result[34] -= 1
+            if result[34] < 0:
+                result[34] = 0
+        elif i == '舞台艺术':
+            result[35] -= 1
+            if result[35] < 0:
+                result[35] = 0
+        elif i == '真人秀':
+            result[36] -= 1
+            if result[36] < 0:
+                result[36] = 0
+        elif i == '脱口秀':
+            result[37] -= 1
+            if result[37] < 0:
+                result[37] = 0
+        elif i == '访谈':
+            result[38] -= 1
+            if result[38] < 0:
+                result[38] = 0
+        elif i == '纪录片':
+            result[39] -= 1
+            if result[39] < 0:
+                result[39] = 0
+    # print(result)
+    # 连接数据库,此前在数据库中创建数据库TESTDB
+    # db = pymysql.connect("localhost", "root", "671jiayou", "moviedata")
+    db = pymysql.connect(host=dbhost, user=dbuser, password=dbpassword, database=dbname)
+    # 使用cursor()方法获取操作游标
+    cursor = db.cursor()
+    sql = "select tag from user where iduser='" + username + "'"
+    # sql = "select * from user"
+    # print(sql)
+    try:
+        # 执行sql语句
+        cursor.execute(sql)
+        results = cursor.fetchall()
+        # print(type(results[0][0]))
+        if len(results) == 1:
+            res = results[0][0]
+            temp = res.split(',')
+            # print('temp ',temp)
+            for i in range(len(temp)):
+                result[i] += int(temp[i])
+            # print('result ',result)
+            code = '200'
+            newres = ''
+            for i in result:
+                newres += str(i)
+                newres += ","
+            newres = newres[:-1]
+            # print('newres ',newres)
+            cursor2 = db.cursor()
+            sql2 = "update user set tag = '" + newres + "' where iduser = '" + username + "'"
+            # print('sql2 ',sql2)
+            cursor2.execute(sql2)
+            db.commit()
+        else:
+            code = '404'
+            data = ''
+        # 提交到数据库执行
+        db.commit()
+    except:
+        # 如果发生错误则回滚
+        traceback.print_exc()
+        db.rollback()
+        code = '404'
+    # 关闭数据库连接
+    db.close()
+    return {'code': code}
 
 
 # 点击按钮获取推荐
@@ -232,6 +631,45 @@ def getRecommend():
             temp = {"id": id, "movie": movie, "rating": rating, "img": img, "director": director, "url": ''}
             res.append(temp)
         print(res)
+        # 提交到数据库执行
+        db.commit()
+        # 注册成功之后跳转到登录页面
+        msg = 'success'
+    except:
+        # 抛出错误信息
+        traceback.print_exc()
+        # 如果发生错误则回滚
+        db.rollback()
+        msg = 'faild'
+    # 关闭数据库连接
+    db.close()
+    return {'msg': msg, "data": res}
+
+
+# 点击按钮获取推荐
+@app.route('/api/wordcloud', methods=["get"])
+def getwordcloud():
+    username = request.args.get("username")
+
+    # 把用户名和密码注册到数据库中
+    # 连接数据库,此前在数据库中创建数据库TESTDB
+    db = pymysql.connect(host=dbhost, user=dbuser, password=dbpassword, database=dbname)
+    # 使用cursor()方法获取操作游标
+    res = []
+    try:
+        cursor = db.cursor()
+        sql = "select tag from user where iduser = '" + username + "'"
+        cursor.execute(sql)
+        results = cursor.fetchall()[0][0].split(',')
+        dict=["喜剧","动作","犯罪","奇幻","剧情","冒险","家庭","爱情","同性","音乐","惊悚","情色","动画","歌舞",
+              "科幻","儿童","历史","战争","悬疑","传记","西部","恐怖","武侠","古装","灾难","黑色电影","运动","惊栗",
+              "悬念","荒诞","戏曲","鬼怪","达人秀","搞笑","成人","舞台艺术","真人秀","脱口秀","访谈","纪录片"]
+        # print(len(dict))
+        res =[]
+        for i in range(len(results)):
+            temp ={"name":dict[i],"value":int(results[i])}
+            res.append(temp)
+        print("res ",res)
         # 提交到数据库执行
         db.commit()
         # 注册成功之后跳转到登录页面
@@ -678,18 +1116,18 @@ def chooseinterests():
             elif i == '纪录片':
                 result[39] += 1
         print(result)
-        newres=""
+        newres = ""
         for i in result:
-            newres+=str(i)
-            newres+=","
-        newres=newres[:-1]
-        print("newres :",newres)
-        print("temp: ",temp)
+            newres += str(i)
+            newres += ","
+        newres = newres[:-1]
+        print("newres :", newres)
+        print("temp: ", temp)
         cursor2 = db.cursor()
-        sql2 = "update user set tag = '"+newres+"' where iduser = '"+userid+"'"
+        sql2 = "update user set tag = '" + newres + "' where iduser = '" + userid + "'"
         cursor2.execute(sql2)
         db.commit()
-        print("sql2 ",sql2)
+        print("sql2 ", sql2)
         return {"code": 200}
     except:
         traceback.print_exc()

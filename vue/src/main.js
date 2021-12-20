@@ -9,6 +9,10 @@ import '@/assets/css/global.css'
 import Header from '@/components/Header/index.vue'
 Vue.config.productionTip = false
 
+import * as echarts from 'echarts';
+Vue.prototype.$echarts = echarts
+
+
 Vue.component('Header',Header)
 
 Vue.use(ElementUI)
